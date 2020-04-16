@@ -7,9 +7,10 @@
 #define BAD_OPEN "Can't open file"
 #define BAD_LINE "Can't read line\n"
 #define BAD_ARGUMENTS "Don't found name of file"
+#define BAD_MEMORY "Can't allocate memory"
 #define MAX_SIZE 1024
 
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     int fin, lineNumber, currentLengthLine = 0, currentLine = 1, *lengths, *carryOvers;
     lengths = (int*)calloc(MAX_SIZE, sizeof(int));
@@ -18,12 +19,16 @@ int main(int argc, char **argv)
 
     if(argc < 2)
     {
+        free(lengths);
+        free(carryOvers);
         perror(BAD_ARGUMENTS);
         exit(1);
     }
 
     if ((fin = open(argv[1], O_RDONLY)) == -1)
     {
+        free(lengths);
+        free(carryOvers);
         perror(BAD_OPEN);
         exit(1);
     }
@@ -41,6 +46,7 @@ int main(int argc, char **argv)
         else
             currentLengthLine++;
     }
+    
     while(scanf("%d", &lineNumber))
     {
         if(lineNumber <= 0)
@@ -58,10 +64,23 @@ int main(int argc, char **argv)
         lseek(fin, carryOvers[lineNumber], 0);
 
         char* textLine = (char*)malloc(lengths[lineNumber] + 1);
+
+        if(textLine == NULL)
+        {
+            free(lengths);
+            free(carryOvers);
+            close(fin);
+            perror(BAD_MEMORY);
+            exit(1);
+        }
+
         if(read(fin, textLine, lengths[lineNumber] + 1))
             write(1, textLine, lengths[lineNumber] + 1);
 
         free(textLine);
     }
+    free(lengths);
+    free(carryOvers);
+    close(fin);
     return 0;
 }
