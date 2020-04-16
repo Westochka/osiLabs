@@ -14,7 +14,22 @@ int main(int argc, char **argv)
 {
     int fin, lineNumber, currentLengthLine = 0, currentLine = 1, *lengths, *carryOvers;
     lengths = (int*)calloc(MAX_SIZE, sizeof(int));
+    
+    if(lengths == NULL)
+    {
+        perror(BAD_MEMORY);
+        exit(1);
+    }
+    
     carryOvers = (int*)calloc(MAX_SIZE, sizeof(int));
+    
+    if(carryOvers == NULL)
+    {
+        free(lengths);
+        perror(BAD_MEMORY);
+        exit(1);
+    }
+    
     char simbol;
 
     if(argc < 2)
@@ -46,7 +61,7 @@ int main(int argc, char **argv)
         else
             currentLengthLine++;
     }
-    
+
     while(scanf("%d", &lineNumber))
     {
         if(lineNumber <= 0)
