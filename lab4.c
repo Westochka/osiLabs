@@ -51,14 +51,14 @@ int main()
             return 1;
         }
 
-        temp->data = (char *) malloc(sizeof(char) * strlen(line) + 1);
+        temp->data = strdup(line);
 
-        if (temp->data == NULL)
+        if(temp->data == NULL)
         {
             perror(NULL_MEMORY);
             return 1;
         }
-        strcpy(temp->data, line);
+
         temp->next = NULL;
         cur->next = temp;
         cur = cur->next;
@@ -78,6 +78,7 @@ int main()
     while (1)
     {
         head = head->next;
+        free(temp->data);
         free(temp);
         if (head == NULL)
             break;
