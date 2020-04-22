@@ -1,85 +1,181 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <errno.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <poll.h>
 #include <sys/mman.h>
 
-#define BAD_OPEN_FILE "Can't open file"
+#define BAD_OPEN "Can't open file"
 #define BAD_LINE "Can't read line\n"
-#define BAD_OPEN_TERM "Can't open /dev/tty"
-#define BAD_ARGUMENTS "Don't found name of file"
+#define BAD_MEMORY "Can't allocate memory"
 #define GET_LINE_FOR_FIVE_SEC "Please, type number of line for 5 seconds\n"
+#define BAD_LSEEK "Can't lseek"
+#define BAD_CLOSE "Can't close file"
+#define BAD_WRITE "Can't write file"
+#define BAD_READ_LINE "Can't read line"
+#define BAD_WRITE_LINE "Can't write line"
+#define BAD_POLL "Can't poll"
+#define BAD_MMAP "Can't mmap"
 #define MAX_SIZE 1024
 
-int main(int argc, char **argv)
+int readingBuff(off_t fileSize, char** carryOvers, int *lengths, char* p)
 {
-    int fin1, fin2, lineNumber, currentLengthLine = 0, currentLine = 1, *lengths, temp = 0;
-    lengths = (int *) calloc(MAX_SIZE, sizeof(int));
-    char simbol, *buff, *p;
-    static char *carryOvers[MAX_SIZE];
-    buff = (char *) malloc(MAX_SIZE);
-    off_t size;
-
-    if (argc < 2)
-    {
-        perror(BAD_ARGUMENTS);
-        exit(1);
-    }
-
-    if ((fin1 = open("/dev/tty", O_RDONLY | O_NDELAY)) == -1)
-    {
-        perror(BAD_OPEN_TERM);
-        exit(1);
-    }
-
-    if ((fin2 = open(argv[1], O_RDONLY)) == -1)
-    {
-        perror(BAD_OPEN_FILE);
-        exit(1);
-    }
-
-    size = lseek(fin2, 0, SEEK_END);
-    p = mmap(0, size, PROT_READ, MAP_SHARED, fin2, 0);
-
+    int currentLine = 1, currentLengthLine = 0;
     carryOvers[currentLine] = p;
-    for (temp; temp < size; temp++)
+
+    for (off_t i = 0; i < fileSize; i++)
     {
-        if (*(p + temp) == '\n')
+        if (*(p + i) == '\n')
         {
             lengths[currentLine++] = currentLengthLine;
-            carryOvers[currentLine] = p + temp + 1;
+            carryOvers[currentLine] = p + i + 1;
             currentLengthLine = 0;
-        } else
+        }
+        else
             currentLengthLine++;
     }
+    return currentLine;
+}
 
+int scanningLines(int lines, int* lengths, char** carryOvers, char* p, int fileSize)
+{
+    struct pollfd fds;
+    fds.fd = STDIN_FILENO;
+    fds.events = POLLIN;
+
+    int lineNumber;
 
     while (1)
     {
         write(1, GET_LINE_FOR_FIVE_SEC, strlen(GET_LINE_FOR_FIVE_SEC));
-        sleep(5);
+        int pollAnsw = poll(&fds, 1, 5000);
 
-        if ((temp = read(fin1, buff, MAX_SIZE)) == 0)
+        if (pollAnsw == 0)
         {
-            write(1, p, size);
-            free(buff);
-            free(lengths);
-            free(carryOvers);
-            close(fin2);
-            close(fin1);
-            exit(0);
-        } else
+            int resWrite = write(1, p, fileSize);
+            while(resWrite == -1)
+            {
+                if (errno == EINTR)
+                {
+                    resWrite = write(1, p, fileSize);
+                    continue;
+                } else
+                    return 2;
+            }
+            return 1;
+        }
+        else if (pollAnsw == -1)
+            return 3;
+        else
         {
-            lineNumber = atoi(buff);
-            if (!carryOvers[lineNumber] && !lengths[lineNumber] && lineNumber != 1)
+            scanf("%d", &lineNumber);
+
+            if (lineNumber <= 0)
+                return 1;
+            if (lineNumber > lines)
             {
                 write(1, BAD_LINE, strlen(BAD_LINE));
                 continue;
             }
 
-            write(1, carryOvers[lineNumber], lengths[lineNumber] + 1);
-
+            int resWrite = write(1, carryOvers[lineNumber], lengths[lineNumber] + 1);
+            while(resWrite == -1)
+            {
+                if (errno == EINTR)
+                {
+                    resWrite = write(1, carryOvers[lineNumber], lengths[lineNumber] + 1);
+                    continue;
+                } else
+                    return 4;
+            }
         }
     }
+}
+
+int main(int argc, char **argv)
+{
+    if (argc < 2)
+    {
+        printf("Usage: %s file_name\n", argv[0]);
+        exit(1);
+    }
+
+    int fin = open(argv[1], O_RDONLY);
+
+    if (fin == -1)
+    {
+        perror(BAD_OPEN);
+        exit(1);
+    }
+
+    int checkClose;
+    off_t fileSize = lseek(fin, 0, SEEK_END);
+    lseek(fin, 0, SEEK_SET);
+
+    int *lengths = (int*) calloc(MAX_SIZE, sizeof(int));
+
+    if (lengths == NULL)
+    {
+        perror(BAD_MEMORY);
+        checkClose = close(fin);
+        if (checkClose == -1)
+            perror(BAD_CLOSE);
+        exit(1);
+    }
+
+    char** carryOvers = (char**) malloc(MAX_SIZE);
+
+    if (carryOvers == NULL)
+    {
+        free(lengths);
+        perror(BAD_MEMORY);
+        checkClose = close(fin);
+        if (checkClose == -1)
+            perror(BAD_CLOSE);
+        exit(1);
+    }
+
+    char* p = mmap(0, fileSize, PROT_READ, MAP_SHARED, fin, 0);
+
+    checkClose = close(fin);
+    if (checkClose == -1)
+    {
+        perror(BAD_CLOSE);
+        exit(1);
+    }
+
+    if(p == NULL)
+    {
+        free(lengths);
+        free(carryOvers);
+        perror(BAD_MMAP);
+    }
+
+    int lines = readingBuff(fileSize, carryOvers, lengths, p);
+
+    int resScan = scanningLines(lines, lengths, carryOvers, p, fileSize);
+
+    free(lengths);
+    free(carryOvers);
+
+   if(resScan == 2)
+   {
+        perror(BAD_WRITE);
+        exit(1);
+   }
+   else if(resScan == 3)
+   {
+        perror(BAD_POLL);
+        exit(1);
+   }
+   else if(resScan == 4)
+   {
+       perror(BAD_WRITE_LINE);
+       exit(1);
+   }
+    exit(0);
 }
