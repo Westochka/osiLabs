@@ -3,57 +3,81 @@
 #include <string.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #define BAD_OPEN "Can't open file"
 #define BAD_LINE "Can't read line\n"
-#define BAD_ARGUMENTS "Don't found name of file"
 #define BAD_MEMORY "Can't allocate memory"
 #define BAD_LSEEK "Can't lseek"
+#define BAD_CLOSE "Can't close file"
+#define BAD_READ "Can't read file"
+#define BAD_READ_LINE "Can't read line"
+#define BAD_WRITE_LINE "Can't write line"
 #define MAX_SIZE 1024
 
-int readingFile(int* carryOvers, int* lengths, int currentLine, int currentLengthLine, int fin)
+int readingBuff(char *buffer, off_t fileSize, int *carryOvers, int *lengths)
 {
-    char simbol;
+    int currentCarryOvers = 0, currentLine = 1, currentLengthLine = 0;
     carryOvers[currentLine] = 0;
 
-    while(read(fin, &simbol, 1))
+    for (off_t i = 0; i < fileSize; i++)
     {
-        if(simbol == '\n')
+        if (buffer[i] == '\n')
         {
-            int ls;
-            if((ls = lseek(fin, 0, 1)) == -1)
-                return -1;
             lengths[currentLine++] = currentLengthLine;
-            carryOvers[currentLine] = ls;
+            currentCarryOvers += currentLengthLine + 1;
+            carryOvers[currentLine] = currentCarryOvers;
             currentLengthLine = 0;
-        }
-        else
+        } else
             currentLengthLine++;
     }
-    return 0;
+    return currentLine;
 }
 
-int scanningLines(int lineNumber, int* lengths, int* carryOvers, int fin)
+int scanningLines(int lines, int *lengths, int *carryOvers, int fin)
 {
-    while(scanf("%d", &lineNumber))
+    int lineNumber;
+
+    while (scanf("%d", &lineNumber))
     {
-        if(lineNumber <= 0)
+        if (lineNumber <= 0)
             return 1;
-        if(!carryOvers[lineNumber] && !lengths[lineNumber] && lineNumber != 1)
+        if (lineNumber > lines)
         {
             write(1, BAD_LINE, strlen(BAD_LINE));
             continue;
         }
-        if(lseek(fin, carryOvers[lineNumber], 0) == -1)
+        if (lseek(fin, carryOvers[lineNumber], 0) == -1)
             return 2;
 
-        char* textLine = (char*)malloc(lengths[lineNumber] + 1);
+        char *textLine = (char *) malloc(lengths[lineNumber] + 1);
 
-        if(textLine == NULL)
+        if (textLine == NULL)
             return 3;
 
-        if(read(fin, textLine, lengths[lineNumber] + 1))
-            write(1, textLine, lengths[lineNumber] + 1);
+        int resRead = read(fin, textLine, lengths[lineNumber] + 1);
+
+        while (resRead == -1)
+        {
+            if (errno == EINTR)
+            {
+                resRead = read(fin, textLine, lengths[lineNumber] + 1);
+                continue;
+            } else
+                return 4;
+        }
+
+        int resWrite = write(1, textLine, lengths[lineNumber] + 1);
+
+        while (resWrite == -1)
+        {
+            if (errno == EINTR)
+            {
+                resWrite = write(1, textLine, lengths[lineNumber] + 1);
+                continue;
+            } else
+                return 5;
+        }
 
         free(textLine);
     }
@@ -61,74 +85,107 @@ int scanningLines(int lineNumber, int* lengths, int* carryOvers, int fin)
 
 int main(int argc, char **argv)
 {
-    int fin, lineNumber, currentLengthLine = 0, currentLine = 1, *lengths, *carryOvers;
-    lengths = (int*)calloc(MAX_SIZE, sizeof(int));
-
-    if(lengths == NULL)
+    if (argc < 2)
     {
-        perror(BAD_MEMORY);
+        printf("Usage: %s file_name\n", argv[0]);
         exit(1);
     }
 
-    carryOvers = (int*)calloc(MAX_SIZE, sizeof(int));
+    int fin = open(argv[1], O_RDONLY);
 
-    if(carryOvers == NULL)
+    if (fin == -1)
     {
-        free(lengths);
-        perror(BAD_MEMORY);
-        exit(1);
-    }
-
-    if(argc < 2)
-    {
-        free(lengths);
-        free(carryOvers);
-        perror(BAD_ARGUMENTS);
-        exit(1);
-    }
-
-    if ((fin = open(argv[1], O_RDONLY)) == -1)
-    {
-        free(lengths);
-        free(carryOvers);
         perror(BAD_OPEN);
         exit(1);
     }
 
-    if(readingFile(carryOvers, lengths, currentLine, currentLengthLine, fin) == -1)
+    int checkClose;
+    off_t fileSize = lseek(fin, 0, SEEK_END);
+    lseek(fin, 0, SEEK_SET);
+
+    char *buffer = (char *) malloc(sizeof(char) * fileSize);
+
+    if (buffer == NULL)
     {
-        free(lengths);
-        free(carryOvers);
-        perror(BAD_LSEEK);
-        close(fin);
+        perror(BAD_MEMORY);
+        checkClose = close(fin);
+        if (checkClose == -1)
+            perror(BAD_CLOSE);
         exit(1);
     }
 
-    int resScan = scanningLines(lineNumber, lengths, carryOvers, fin);
+    int checkReading = read(fin, buffer, fileSize);
 
-    if(resScan == 1)
+    while (checkReading == -1)
     {
-        free(lengths);
-        free(carryOvers);
-        close(fin);
+        if (errno == EINTR)
+        {
+            checkReading = read(fin, buffer, fileSize);
+            continue;
+        } else
+        {
+            perror(BAD_READ);
+            exit(1);
+        }
+    }
+
+    int *lengths = (int*) calloc(MAX_SIZE, sizeof(int));
+
+    if (lengths == NULL)
+    {
+        free(buffer);
+        perror(BAD_MEMORY);
+        checkClose = close(fin);
+        if (checkClose == -1)
+            perror(BAD_CLOSE);
         exit(1);
     }
-    else if(resScan == 2)
+
+    int *carryOvers = (int*) calloc(MAX_SIZE, sizeof(int));
+
+    if (carryOvers == NULL)
     {
+        free(buffer);
         free(lengths);
-        free(carryOvers);
+        perror(BAD_MEMORY);
+        checkClose = close(fin);
+        if (checkClose == -1)
+            perror(BAD_CLOSE);
+        exit(1);
+    }
+
+    int lines = readingBuff(buffer, fileSize, carryOvers, lengths);
+
+    free(buffer);
+
+    int resScan = scanningLines(lines, lengths, carryOvers, fin);
+
+    free(lengths);
+    free(carryOvers);
+
+    checkClose = close(fin);
+    if (checkClose == -1)
+    {
+        perror(BAD_CLOSE);
+        exit(1);
+    }
+
+    if (resScan == 2)
+    {
         perror(BAD_LSEEK);
-        close(fin);
         exit(1);
-    }
-    else if(resScan == 3)
+    } else if (resScan == 3)
     {
-        free(lengths);
-        free(carryOvers);
-        close(fin);
         perror(BAD_MEMORY);
         exit(1);
+    } else if (resScan == 4)
+    {
+        perror(BAD_READ_LINE);
+        exit(1);
+    } else if (resScan == 5)
+    {
+        perror((BAD_WRITE_LINE));
+        exit(1);
     }
-
-    return 0;
+    exit(0);
 }
