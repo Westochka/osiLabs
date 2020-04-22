@@ -174,15 +174,18 @@ int main(int argc, char **argv)
     {
         perror(BAD_LSEEK);
         exit(1);
-    } else if (resScan == 3)
+    } 
+    else if (resScan == 3)
     {
         perror(BAD_MEMORY);
         exit(1);
-    } else if (resScan == 4)
+    } 
+    else if (resScan == 4)
     {
         perror(BAD_READ_LINE);
         exit(1);
-    } else if (resScan == 5)
+    } 
+    else if (resScan == 5)
     {
         perror((BAD_WRITE_LINE));
         exit(1);
