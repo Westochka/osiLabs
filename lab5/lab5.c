@@ -15,6 +15,28 @@
 #define BAD_WRITE_LINE "Can't write line"
 #define MAX_SIZE 1024
 
+int nonIntrRead(int fd, void* buf, size_t count)
+{
+    while (1)
+    {
+        int ret = read(fd, buf, count);
+        if (ret == -1 && errno == EINTR)
+            continue;
+        return ret;
+    }
+}
+
+int nonIntrWrite(int fd, void* buf, size_t count)
+{
+    while(1)
+    {
+        int wr = write(fd, buf, count);
+        if(wr == -1 && errno == EINTR)
+            continue;
+        return wr;
+    }
+}
+
 int readingBuff(char *buffer, off_t fileSize, int *carryOvers, int *lengths)
 {
     int currentCarryOvers = 0, currentLine = 1, currentLengthLine = 0;
@@ -28,7 +50,7 @@ int readingBuff(char *buffer, off_t fileSize, int *carryOvers, int *lengths)
             currentCarryOvers += currentLengthLine + 1;
             carryOvers[currentLine] = currentCarryOvers;
             currentLengthLine = 0;
-        } 
+        }
         else
             currentLengthLine++;
     }
@@ -56,30 +78,18 @@ int scanningLines(int lines, int *lengths, int *carryOvers, int fin)
         if (textLine == NULL)
             return 3;
 
-        int resRead = read(fin, textLine, lengths[lineNumber] + 1);
-
-        while (resRead == -1)
+        int resRead = nonIntrRead(fin, textLine, lengths[lineNumber] + 1);
+        if(resRead == -1)
         {
-            if (errno == EINTR)
-            {
-                resRead = read(fin, textLine, lengths[lineNumber] + 1);
-                continue;
-            } 
-            else
-                return 4;
+            free(textLine);
+            return 4;
         }
 
-        int resWrite = write(1, textLine, lengths[lineNumber] + 1);
-
-        while (resWrite == -1)
+        int resWrite = nonIntrWrite(1, textLine, lengths[lineNumber] + 1);
+        if(resWrite == -1)
         {
-            if (errno == EINTR)
-            {
-                resWrite = write(1, textLine, lengths[lineNumber] + 1);
-                continue;
-            } 
-            else
-                return 5;
+            free(textLine);
+            return 5;
         }
 
         free(textLine);
@@ -117,20 +127,12 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    int checkReading = read(fin, buffer, fileSize);
-
-    while (checkReading == -1)
+    int checkReading = nonIntrRead(fin, buffer, fileSize);
+    if(checkReading == -1)
     {
-        if (errno == EINTR)
-        {
-            checkReading = read(fin, buffer, fileSize);
-            continue;
-        } 
-        else
-        {
-            perror(BAD_READ);
-            exit(1);
-        }
+        free(buffer);
+        perror(BAD_READ);
+        exit(1);
     }
 
     int *lengths = (int*) calloc(MAX_SIZE, sizeof(int));
@@ -191,7 +193,7 @@ int main(int argc, char **argv)
     }
     else if (resScan == 5)
     {
-        perror((BAD_WRITE_LINE));
+        perror(BAD_WRITE_LINE);
         exit(1);
     }
     exit(0);
