@@ -22,6 +22,28 @@
 #define BAD_MMAP "Can't mmap"
 #define MAX_SIZE 1024
 
+int nonIntrRead(int fd, void* buf, size_t count)
+{
+    while (1)
+    {
+        int ret = read(fd, buf, count);
+        if (ret == -1 && errno == EINTR)
+            continue;
+        return ret;
+    }
+}
+
+int nonIntrWrite(int fd, void* buf, size_t count)
+{
+    while(1)
+    {
+        int wr = write(fd, buf, count);
+        if(wr == -1 && errno == EINTR)
+            continue;
+        return wr;
+    }
+}
+
 int readingBuff(off_t fileSize, char** carryOvers, int *lengths, char* p)
 {
     int currentLine = 1, currentLengthLine = 0;
@@ -56,16 +78,9 @@ int scanningLines(int lines, int* lengths, char** carryOvers, char* p, int fileS
 
         if (pollAnsw == 0)
         {
-            int resWrite = write(1, p, fileSize);
-            while(resWrite == -1)
-            {
-                if (errno == EINTR)
-                {
-                    resWrite = write(1, p, fileSize);
-                    continue;
-                } else
-                    return 2;
-            }
+            int resWrite = nonIntrWrite(1, p, fileSize);
+            if(resWrite == -1)
+                return 2;
             return 1;
         }
         else if (pollAnsw == -1)
@@ -82,16 +97,9 @@ int scanningLines(int lines, int* lengths, char** carryOvers, char* p, int fileS
                 continue;
             }
 
-            int resWrite = write(1, carryOvers[lineNumber], lengths[lineNumber] + 1);
-            while(resWrite == -1)
-            {
-                if (errno == EINTR)
-                {
-                    resWrite = write(1, carryOvers[lineNumber], lengths[lineNumber] + 1);
-                    continue;
-                } else
-                    return 4;
-            }
+            int resWrite = nonIntrWrite(1, carryOvers[lineNumber], lengths[lineNumber] + 1);
+            if(resWrite == -1)
+                return 4;
         }
     }
 }
