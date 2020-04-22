@@ -28,7 +28,8 @@ int readingBuff(char *buffer, off_t fileSize, int *carryOvers, int *lengths)
             currentCarryOvers += currentLengthLine + 1;
             carryOvers[currentLine] = currentCarryOvers;
             currentLengthLine = 0;
-        } else
+        } 
+        else
             currentLengthLine++;
     }
     return currentLine;
@@ -63,7 +64,8 @@ int scanningLines(int lines, int *lengths, int *carryOvers, int fin)
             {
                 resRead = read(fin, textLine, lengths[lineNumber] + 1);
                 continue;
-            } else
+            } 
+            else
                 return 4;
         }
 
@@ -75,7 +77,8 @@ int scanningLines(int lines, int *lengths, int *carryOvers, int fin)
             {
                 resWrite = write(1, textLine, lengths[lineNumber] + 1);
                 continue;
-            } else
+            } 
+            else
                 return 5;
         }
 
@@ -122,7 +125,8 @@ int main(int argc, char **argv)
         {
             checkReading = read(fin, buffer, fileSize);
             continue;
-        } else
+        } 
+        else
         {
             perror(BAD_READ);
             exit(1);
@@ -174,17 +178,17 @@ int main(int argc, char **argv)
     {
         perror(BAD_LSEEK);
         exit(1);
-    } 
+    }
     else if (resScan == 3)
     {
         perror(BAD_MEMORY);
         exit(1);
-    } 
+    }
     else if (resScan == 4)
     {
         perror(BAD_READ_LINE);
         exit(1);
-    } 
+    }
     else if (resScan == 5)
     {
         perror((BAD_WRITE_LINE));
