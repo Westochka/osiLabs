@@ -116,7 +116,7 @@ int main(int argc, char **argv)
     off_t fileSize = lseek(fin, 0, SEEK_END);
     lseek(fin, 0, SEEK_SET);
 
-    char *buffer = (char*) malloc(sizeof(char) * fileSize);
+    char *buffer = (char *) malloc(sizeof(char) * fileSize);
 
     if (buffer == NULL)
     {
@@ -132,6 +132,9 @@ int main(int argc, char **argv)
     {
         free(buffer);
         perror(BAD_READ);
+        checkClose = close(fin);
+        if (checkClose == -1)
+            perror(BAD_CLOSE);
         exit(1);
     }
 
