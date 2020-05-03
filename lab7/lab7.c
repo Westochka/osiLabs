@@ -20,6 +20,7 @@
 #define BAD_WRITE_LINE "Can't write line"
 #define BAD_POLL "Can't poll"
 #define BAD_MMAP "Can't mmap"
+#define BAD_MUN_MAP "Can't munmap"
 #define MAX_SIZE 1024
 
 int nonIntrRead(int fd, void* buf, size_t count)
@@ -169,6 +170,14 @@ int main(int argc, char **argv)
 
     free(lengths);
     free(carryOvers);
+
+    int checkMunMap = munmap(p, fileSize);
+
+    if(checkMunMap == -1)
+    {
+        perror(BAD_MUN_MAP);
+        exit(1);
+    }
 
    if(resScan == 2)
    {
