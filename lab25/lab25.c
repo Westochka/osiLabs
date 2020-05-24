@@ -41,8 +41,6 @@ int main(int argc, char** argv)
         char* line ={ "AbcDEfgHijKLMNop\n"};
         char buf[BUF_SIZE];
 
-        int rtn;
-
         if (pipe(fd) == -1)
         {
                 perror(BAD_PIPE);
