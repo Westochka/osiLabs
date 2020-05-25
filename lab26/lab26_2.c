@@ -42,17 +42,17 @@ int main()
                 exit(1);
         }
 
-    for(int i = 0; i < resRead; i++)
-        if(islower(buf[i]))
-                buf[i] = toupper(buf[i]);
+        for(int i = 0; i < resRead; i++)
+            if(islower(buf[i]))
+                    buf[i] = toupper(buf[i]);
             
-    int resWrite = nonIntrWrite(1, buf, resRead);
+        int resWrite = nonIntrWrite(1, buf, resRead);
 
-    if(resWrite == -1)
-    {
-        perror(BAD_WRITE);
-        exit(2);
-    }
+        if(resWrite == -1)
+        {
+            perror(BAD_WRITE);
+            exit(2);
+        }
 
-    exit(0);
+        exit(0);
 }
