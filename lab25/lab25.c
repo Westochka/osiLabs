@@ -45,7 +45,7 @@ int main(int argc, char** argv)
         {
                 perror(BAD_PIPE);
                 exit(1);
- }
+        }
 
         pid1 = fork();
         if (pid1 == 0)
@@ -92,7 +92,7 @@ int main(int argc, char** argv)
                 }
                 close(fd[0]);
                 exit(0);
- }
+        }
         else if(pid2 == -1)
         {
                 close(fd[1]);
