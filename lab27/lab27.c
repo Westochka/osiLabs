@@ -17,10 +17,10 @@ int main(int argc, char **argv)
  	int resPClose, resFClose;
 
  	if (argc < 2)
-    {
-        printf("Usage: %s file_name\n", argv[0]);
-        exit(1);
-    }
+    	{
+        	printf("Usage: %s file_name\n", argv[0]);
+        	exit(1);
+    	}
 
 	char buf[BUF_SIZE];
 
