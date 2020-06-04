@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 	resPClose = pclose(fin);
 
 	if(resPClose == -1)
-			perror(BAD_PCLOSE);
+		perror(BAD_PCLOSE);
 
 	exit(0);
 }
