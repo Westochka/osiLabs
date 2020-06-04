@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <string.h>
 
+#define LINE_SIZE 128
 #define BUF_SIZE 1024
 #define BAD_POPEN "Can't popen"
 #define BAD_GETS "Can't gets"
@@ -17,18 +18,20 @@ int main(int argc, char **argv)
  	int resPClose;
 
  	if (argc < 2)
-    	{
-        	printf("Usage: %s file_name\n", argv[0]);
-        	exit(1);
-    	}
+    {
+        printf("Usage: %s file_name\n", argv[0]);
+        exit(1);
+    }
 
-    	char* line = (char*)malloc(BUF_SIZE);
+    char* line = (char*)malloc(LINE_SIZE);
 
-    	strcat(line, "cat ");
-    	strcat(line, argv[1]);
-    	strcat(line, " | grep '^$' | wc -l");
+    strcat(line, "cat ");
+    strcat(line, argv[1]);
+    strcat(line, " | grep '^$' | wc -l");
 
 	fin = popen(line, "r");
+
+	free(line);
 
 	if(fin == NULL)
 	{
