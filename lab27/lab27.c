@@ -17,16 +17,16 @@ int main(int argc, char **argv)
  	int resPClose;
 
  	if (argc < 2)
-    {
-        printf("Usage: %s file_name\n", argv[0]);
-        exit(1);
-    }
+    	{
+        	printf("Usage: %s file_name\n", argv[0]);
+        	exit(1);
+    	}
 
-    char* line = (char*)malloc(BUF_SIZE);
+    	char* line = (char*)malloc(BUF_SIZE);
 
-    strcat(line, "cat ");
-    strcat(line, argv[1]);
-    strcat(line, " | grep '^$' | wc -l");
+    	strcat(line, "cat ");
+    	strcat(line, argv[1]);
+    	strcat(line, " | grep '^$' | wc -l");
 
 	fin = popen(line, "r");
 
