@@ -1,9 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <string.h>
 
 #define BAD_POPEN "Can't popen"
 #define BAD_PUT "Can't put"
-#define BAD_CLOSE "Bad close"
+#define BAD_PCLOSE "Bad pclose"
+#define BAD_CHILD "Child process finished with error"
 
 int main()
 {
@@ -20,18 +26,29 @@ int main()
 
     int resPuts = fputs(line, fptr);
 
-    int resClose = pclose(fptr);
+    int resPClose = pclose(fptr);
 
-    if(resClose == -1)
+    if(resPClose == -1)
     {
-        perror(BAD_CLOSE);
-        exit(3);
+        perror(BAD_PCLOSE);
+        exit(2);
     }
+
+    if(WIFEXITED(resPClose) != 0 && WEXITSTATUS(resPClose) != 0)
+	{
+		printf("Child process finished with status: %d\n", WEXITSTATUS(resPClose));
+		exit(3);
+	}
+	else if(WIFEXITED(resPClose) == 0)
+	{
+		perror(BAD_CHILD);
+		exit(4);
+	}
 
     if(resPuts == EOF)
     {
         perror(BAD_PUT);
-        exit(2);
+        exit(5);
     }
 
     exit(0);
