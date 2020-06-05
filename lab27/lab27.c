@@ -10,6 +10,7 @@
 #define BUF_SIZE 1024
 #define BAD_POPEN "Can't popen"
 #define BAD_PCLOSE "Bad pclose"
+#define BAD_CHILD "Child process finished with error"
  
 int main(int argc, char **argv)
 {
@@ -19,16 +20,16 @@ int main(int argc, char **argv)
  	int resPClose;
 
  	if (argc < 2)
-    	{
-        	printf("Usage: %s file_name\n", argv[0]);
-        	exit(1);
-    	}
+    {
+        printf("Usage: %s file_name\n", argv[0]);
+        exit(1);
+    }
 
-    	char* line = (char*)malloc(LINE_SIZE);
+    char* line = (char*)malloc(LINE_SIZE);
 
-    	strcat(line, "cat ");
-    	strcat(line, argv[1]);
-    	strcat(line, " | grep '^$' | wc -l");
+    strcat(line, "cat ");
+    strcat(line, argv[1]);
+    strcat(line, " | grep '^$' | wc -l");
 
 	fin = popen(line, "r");
 
@@ -44,16 +45,26 @@ int main(int argc, char **argv)
 
 	resPClose = pclose(fin);
 
-	if(resPClose != -1)
+	if(resPClose == -1)
 	{
-		if(WIFEXITED(resPClose) == 0 && WEXITSTATUS(resPClose) != 0)
-		{
-			perror(BAD_PCLOSE);
-			exit(3);
-		}
+		perror(BAD_PCLOSE);
+		exit(3);
 	}
 
-	printf("%d\n", answ);
+	if(WIFEXITED(resPClose) != 0 && WEXITSTATUS(resPClose) != 0)
+	{
+		printf("Child process finished with status: %d\n", WEXITSTATUS(resPClose));
+		exit(4);
+	}
+	else if(WIFEXITED(resPClose) != 0 && WEXITSTATUS(resPClose) == 0) 
+	{
+		printf("%d\n", answ);
+		exit(0);
+	}
+	else
+	{
+		perror(BAD_CHILD);
+		exit(5);
+	}
 
-	exit(0);
 }
