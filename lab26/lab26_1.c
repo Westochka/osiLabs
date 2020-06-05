@@ -35,15 +35,15 @@ int main()
     }
 
     if(WIFEXITED(resPClose) != 0 && WEXITSTATUS(resPClose) != 0)
-	{
-		printf("Child process finished with status: %d\n", WEXITSTATUS(resPClose));
-		exit(3);
-	}
-	else if(WIFEXITED(resPClose) == 0)
-	{
-		perror(BAD_CHILD);
-		exit(4);
-	}
+    {
+	printf("Child process finished with status: %d\n", WEXITSTATUS(resPClose));
+	exit(3);
+    }
+    else if(WIFEXITED(resPClose) == 0)
+    {
+	perror(BAD_CHILD);
+	exit(4);
+    }
 
     if(resPuts == EOF)
     {
