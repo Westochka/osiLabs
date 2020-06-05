@@ -1,33 +1,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <string.h>
 
 #define LINE_SIZE 128
 #define BUF_SIZE 1024
 #define BAD_POPEN "Can't popen"
-#define BAD_GETS "Can't gets"
-#define BAD_PCLOSE "Can't pclose"
+#define BAD_PCLOSE "Bad pclose"
  
 int main(int argc, char **argv)
 {
  	FILE *fin;
 
- 	char res[BUF_SIZE];
+ 	int answ;
  	int resPClose;
 
  	if (argc < 2)
-    	{
-        	printf("Usage: %s file_name\n", argv[0]);
-        	exit(1);
-    	}
+    {
+        printf("Usage: %s file_name\n", argv[0]);
+        exit(1);
+    }
 
-    	char* line = (char*)malloc(LINE_SIZE);
+    char* line = (char*)malloc(LINE_SIZE);
 
-    	strcat(line, "cat ");
-    	strcat(line, argv[1]);
-    	strcat(line, " | grep '^$' | wc -l");
+    strcat(line, "cat ");
+    strcat(line, argv[1]);
+    strcat(line, " | grep '^$' | wc -l");
 
 	fin = popen(line, "r");
 
@@ -39,13 +40,20 @@ int main(int argc, char **argv)
 		exit(2);
 	}
 
-	fgets(res, BUF_SIZE, fin);
-	printf("%d\n", atoi(res));
+	fscanf(fin, "%d", &answ);
 
 	resPClose = pclose(fin);
 
-	if(resPClose == -1)
-		perror(BAD_PCLOSE);
+	if(resPClose != -1)
+	{
+			if(WIFEXITED(resPClose) == 0 && WEXITSTATUS(resPClose) != 0)
+			{
+					perror(BAD_PCLOSE);
+					exit(3);
+			}
+	}
+
+	printf("%d\n", answ);
 
 	exit(0);
 }
